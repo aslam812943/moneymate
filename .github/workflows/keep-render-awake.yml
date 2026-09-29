@@ -1,0 +1,24 @@
+name: Keep Render service warm
+
+on:
+  schedule:
+    - cron: '3-59/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: true
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Request the production health endpoint
+        env:
+          HEALTH_URL: ${{ secrets.RENDER_HEALTH_URL }}
+        run: |
+          test -n "$HEALTH_URL"
+          curl --fail --silent --show-error --max-time 45 --retry 2 "$HEALTH_URL"

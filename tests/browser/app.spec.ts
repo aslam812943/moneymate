@@ -6,6 +6,26 @@ test('API rejects requests from untrusted origins',async({request})=>{
   const unavailable=await request.post('/api/auth/signup',{headers:{Origin:'http://localhost:8000'},data:{email:'test@example.com',password:'test-password-123'}});expect(unavailable.status()).toBe(503);
  }
 });
+test('authentication is responsive and accepts four-character passwords',async({page})=>{
+ await page.setViewportSize({width:390,height:650});
+ await page.goto('/');
+ const password=page.getByLabel('Password');
+ await expect(password).toHaveAttribute('minlength','4');
+ await expect(password).toHaveAttribute('placeholder','At least 4 characters');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ expect(await page.evaluate(()=>document.documentElement.scrollHeight<=window.innerHeight)).toBe(true);
+ await page.getByRole('button',{name:'New around here? Create an account'}).click();
+ await expect(page.getByLabel('Your name')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+});
+test('primary pages do not overflow common responsive viewports',async({page})=>{
+ await page.goto('/');await page.getByRole('button',{name:'Explore the live demo'}).click();
+ const routes=['/','/income','/expenses','/emis','/people','/budgets','/goals','/reports','/settings'];
+ for(const viewport of [{width:360,height:740},{width:768,height:900},{width:1024,height:768},{width:1440,height:900}]){
+  await page.setViewportSize(viewport);
+  for(const route of routes){await page.goto(route);await expect(page.locator('main')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),`${route} overflows at ${viewport.width}px`).toBe(true);}
+ }
+});
 test('demo transactions, goals, budgets, reports and mobile navigation',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/');await page.getByRole('button',{name:'Explore the live demo'}).click();
@@ -22,6 +42,7 @@ test('demo transactions, goals, budgets, reports and mobile navigation',async({p
  await page.locator('.sidebar').getByRole('link',{name:'EMIs & loans'}).click();await page.getByRole('button',{name:'View schedule & payment history'}).first().click();await expect(page.getByRole('heading',{name:'Amortization schedule'})).toBeVisible();await page.getByRole('button',{name:'Close',exact:true}).click();
  await page.locator('.sidebar').getByRole('link',{name:'Reports',exact:true}).click();await expect(page.getByRole('heading',{name:'Patterns worth knowing'})).toBeVisible();
  await page.locator('.sidebar').getByRole('link',{name:'Settings',exact:true}).click();await page.getByRole('button',{name:'Use dark mode'}).click();await expect(page.locator('html')).toHaveAttribute('data-theme','dark');
+ await page.getByRole('button',{name:'Load demo data'}).click();await expect(page.getByRole('dialog',{name:'Load demo data?'})).toBeVisible();await page.getByRole('button',{name:'Cancel'}).click();await expect(page.getByRole('dialog',{name:'Load demo data?'})).toHaveCount(0);
  await page.getByRole('button',{name:'Use light mode'}).click();await page.locator('.sidebar').getByRole('link',{name:'Overview',exact:true}).click();
  await expect(page.locator('.stat-card').first().locator('strong')).toHaveText('₹1,03,000');
  await expect(page.locator('[data-sonner-toast]')).toHaveCount(0,{timeout:10000});
