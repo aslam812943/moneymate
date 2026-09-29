@@ -17,6 +17,7 @@ test('authentication is responsive and accepts four-character passwords',async({
  await page.getByRole('button',{name:'New around here? Create an account'}).click();
  await expect(page.getByLabel('Your name')).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ for(const viewport of [{width:768,height:650},{width:1020,height:900}]){await page.setViewportSize(viewport);await expect(page.locator('.auth-story')).toBeVisible();expect(await page.locator('.auth-story').evaluate(el=>el.scrollHeight<=el.clientHeight),`Welcome panel is clipped at ${viewport.width}x${viewport.height}`).toBe(true);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);}
 });
 test('primary pages do not overflow common responsive viewports',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'Explore the live demo'}).click();
