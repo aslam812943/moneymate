@@ -1,0 +1,21 @@
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
+import type { State } from '../shared/schema';
+import { stateSchema } from '../shared/schema';
+import { demoState, materializeRecurring } from '../shared/finance';
+export async function api(url:string,method='GET',body?:unknown){const r=await fetch('/api'+url,{method,headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined,credentials:'same-origin'});const data=await r.json().catch(()=>({error:'The server is unavailable.'}));if(!r.ok)throw new Error(data.error||'Request failed');return data;}
+type Store={state:State|null;loading:boolean;demo:boolean;saving:boolean;save:(next:State)=>Promise<boolean>;enterDemo:()=>void;authenticate:(email:string,password:string,name?:string)=>Promise<void>;logout:()=>Promise<void>;deleteAccount:()=>Promise<void>};
+const Context=createContext<Store>(null!);
+const STORAGE='moneymate-demo-v1';
+export function Provider({children}:{children:ReactNode}){const [state,setState]=useState<State|null>(null),[loading,setLoading]=useState(true),[demo,setDemo]=useState(false),[saving,setSaving]=useState(false);const revision=useRef(0),busy=useRef(false);
+ useEffect(()=>{let mounted=true;(async()=>{try{if(sessionStorage.getItem('mm-mode')==='demo'){const raw=localStorage.getItem(STORAGE);const parsed=raw?stateSchema.safeParse(JSON.parse(raw)):null;const s=materializeRecurring(parsed?.success?parsed.data:demoState());if(mounted){setState(s);setDemo(true);}}else{const data=await api('/state');if(mounted){setState(data.state);revision.current=data.revision;}}}catch{ /* A signed-out visitor can choose demo or authenticate. */ }finally{if(mounted)setLoading(false);}})();return()=>{mounted=false;};},[]);
+ const save=async(next:State)=>{if(busy.current){toast.error('Please wait for the current save.');return false;}const parsed=stateSchema.safeParse(next);if(!parsed.success){toast.error(parsed.error.issues[0].message);return false;}busy.current=true;setSaving(true);try{if(demo)localStorage.setItem(STORAGE,JSON.stringify(parsed.data));else{const data=await api('/state','PUT',{state:parsed.data,revision:revision.current});revision.current=data.revision;}setState(parsed.data);return true;}catch(e){toast.error((e as Error).message);return false;}finally{busy.current=false;setSaving(false);}};
+ const enterDemo=()=>{try{const raw=localStorage.getItem(STORAGE);let s=demoState();if(raw){const parsed=stateSchema.safeParse(JSON.parse(raw));if(parsed.success)s=materializeRecurring(parsed.data);}localStorage.setItem(STORAGE,JSON.stringify(s));sessionStorage.setItem('mm-mode','demo');setDemo(true);setState(s);}catch{toast.error('Browser storage is unavailable. Please enable local storage.');}};
+ const authenticate=async(email:string,password:string,name?:string)=>{const data=await api('/auth/'+(name?'signup':'login'),'POST',{email,password,name});sessionStorage.removeItem('mm-mode');revision.current=data.revision;setState(data.state);setDemo(false);};
+ const logout=async()=>{try{if(!demo)await api('/logout','POST');sessionStorage.removeItem('mm-mode');setState(null);setDemo(false);}catch(e){toast.error((e as Error).message);}};
+ const deleteAccount=async()=>{try{if(demo)localStorage.removeItem(STORAGE);else await api('/account','DELETE');sessionStorage.removeItem('mm-mode');setState(null);setDemo(false);}catch(e){toast.error((e as Error).message);}};
+ return <Context.Provider value={{state,loading,demo,saving,save,enterDemo,authenticate,logout,deleteAccount}}>{children}</Context.Provider>;
+}
+export const useStore=()=>useContext(Context);
+export function download(name:string,content:string,type='text/csv'){const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+export function csv(rows:Record<string,unknown>[]){if(!rows.length){toast.info('No records to export');return;}const keys=Object.keys(rows[0]);const escape=(v:unknown)=>{let s=String(v??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replaceAll('"','""')+'"';};download('moneymate-export.csv','\uFEFF'+[keys.map(escape).join(','),...rows.map(r=>keys.map(k=>escape(r[k])).join(','))].join('\r\n'));}

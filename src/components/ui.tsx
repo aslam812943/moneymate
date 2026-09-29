@@ -1,0 +1,18 @@
+import * as Dialog from '@radix-ui/react-dialog';
+import { Slot } from '@radix-ui/react-slot';
+import { cva, type VariantProps } from 'class-variance-authority';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { X, ArrowUpRight, ArrowDownRight, Inbox } from 'lucide-react';
+import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { money } from '../../shared/finance';
+export const cn=(...v:ClassValue[])=>twMerge(clsx(v));
+const variants=cva('btn',{variants:{variant:{default:'btn-primary',outline:'btn-outline',ghost:'btn-ghost',danger:'btn-danger'}},defaultVariants:{variant:'default'}});
+export function Button({className,variant,asChild=false,...props}:ButtonHTMLAttributes<HTMLButtonElement>&VariantProps<typeof variants>&{asChild?:boolean}){const C=asChild?Slot:'button';return <C className={cn(variants({variant}),className)} {...props}/>;}
+export function Modal({open,onClose,title,description,children}:{open:boolean;onClose:()=>void;title:string;description?:string;children:ReactNode}){return <Dialog.Root open={open} onOpenChange={v=>!v&&onClose()}><Dialog.Portal><Dialog.Overlay className="modal-overlay"/><Dialog.Content className="modal"><Dialog.Title>{title}</Dialog.Title><Dialog.Description>{description||'Keep your financial picture up to date.'}</Dialog.Description><Dialog.Close className="modal-close" aria-label="Close"><X size={20}/></Dialog.Close>{children}</Dialog.Content></Dialog.Portal></Dialog.Root>;}
+export function Card({title,subtitle,action,children,className=''}:{title?:string;subtitle?:string;action?:ReactNode;children:ReactNode;className?:string}){return <section className={'card '+className}>{title&&<div className="card-heading"><div><h3>{title}</h3>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>}{children}</section>;}
+export function Empty({text='Nothing here yet. Add your first entry to get started.'}:{text?:string}){return <div className="empty"><Inbox size={28}/><p>{text}</p></div>;}
+export function Progress({value,color}:{value:number;color?:string}){return <div className="progress" role="progressbar" aria-valuenow={Math.round(value)} aria-valuemin={0} aria-valuemax={100}><span style={{width:`${Math.max(0,Math.min(100,value))}%`,background:color|| (value>=100?'#e87878':value>=80?'#eba757':'#8173d8')}}/></div>;}
+export function Change({value,invert=false}:{value:number|null;invert?:boolean}){const good=value!==null&&(invert?value<=0:value>=0);const Icon=(value??0)>=0?ArrowUpRight:ArrowDownRight;return <span className={'change '+(good?'positive':'negative')}><Icon size={13}/>{value===null?'New':`${Math.abs(value).toFixed(1)}%`}</span>;}
+function Counter({value}:{value:number}){const [shown,setShown]=useState(value);useEffect(()=>{if(matchMedia('(prefers-reduced-motion: reduce)').matches){setShown(value);return;}const start=performance.now();let id=0;const tick=(t:number)=>{const p=Math.min(1,(t-start)/450);setShown(value*(1-Math.pow(1-p,3)));if(p<1)id=requestAnimationFrame(tick);};id=requestAnimationFrame(tick);return()=>cancelAnimationFrame(id);},[value]);return <>{money(shown)}</>;}
+export function StatCard({title,value,change,icon,invert=false,highlight=false,caption}:{title:string;value:number;change:number|null;icon:ReactNode;invert?:boolean;highlight?:boolean;caption?:string}){return <div className={'stat-card '+(highlight?'stat-highlight':'')}><div className="stat-top"><span>{title}</span><span className="stat-icon">{icon}</span></div><strong><Counter value={value}/></strong><div className="stat-bottom"><Change value={change} invert={invert}/><span>{caption||'vs. last month'}</span></div></div>;}
