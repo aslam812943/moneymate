@@ -12,23 +12,25 @@ test('seed salary is not duplicated when opening demo again',()=>{const now=new 
 test('forecast handles past, present and future months',()=>{const s=emptyState();s.expenses=[{id:'e',amount:1000,date:'2026-09-02',note:'',category_id:'cat-1',is_recurring:false,tags:[]}];assert.equal(forecast(s,'2026-09',new Date(2026,8,10)),3000);assert.equal(forecast(s,'2026-09',new Date(2026,9,1)),1000);assert.equal(forecast(s,'2026-10',new Date(2026,8,10)),0);});
 test('validation rejects cross-reference errors and duplicate budgets',()=>{const s=emptyState();s.budgets=[{id:'a',month:'2026-09',category_id:'missing',limit_amount:100}];assert.equal(stateSchema.safeParse(s).success,false);s.budgets=[{id:'a',month:'2026-09',category_id:'cat-1',limit_amount:100},{id:'b',month:'2026-09',category_id:'cat-1',limit_amount:200}];assert.equal(stateSchema.safeParse(s).success,false);});
 test('people ledger supports partial and full repayments without changing income or expenses',()=>{const s=emptyState();s.profile.onboarded=true;s.incomes.push({id:'income',amount:10000,date:'2026-09-01',note:'Salary',source_type:'Salary',is_recurring:false,tags:[]});s.expenses.push({id:'expense',amount:1000,date:'2026-09-02',note:'Food',category_id:'cat-2',payment_method:'UPI',is_recurring:false,tags:[]});s.people.push({id:'p',name:'Rahul',relation:'Friend',notes:'',created_at:'2026-09-01T00:00:00.000Z'});s.ledger_entries.push({id:'l',person_id:'p',direction:'GAVE',amount:2000,date:'2026-09-03',due_date:'2026-09-20',purpose:'Help',payment_method:'UPI',interest_enabled:false,remind:true,status:'PENDING',written_off_amount:0,created_at:'2026-09-03T00:00:00.000Z'});assert.deepEqual(totals(s,'2026-09'),{income:10000,expenses:1000,balance:9000,savings:9000,rate:90,emi:0});assert.equal(cashBalance(s,'2026-09'),7000);assert.equal(ledgerPending(s,s.ledger_entries[0],new Date('2026-09-10')),2000);s.repayments.push({id:'r1',ledger_entry_id:'l',amount:500,date:'2026-09-10',payment_method:'UPI',note:'Part 1',created_at:'2026-09-10T00:00:00.000Z'},{id:'r2',ledger_entry_id:'l',amount:500,date:'2026-09-12',payment_method:'Cash',note:'Part 2',created_at:'2026-09-12T00:00:00.000Z'});assert.equal(ledgerPending(s,s.ledger_entries[0],new Date('2026-09-13')),1000);assert.equal(ledgerStatus(s,s.ledger_entries[0],new Date('2026-09-13')),'PARTIAL');assert.equal(cashBalance(s,'2026-09'),8000);s.repayments.push({id:'r3',ledger_entry_id:'l',amount:1000,date:'2026-09-15',payment_method:'Bank Transfer',note:'Final',created_at:'2026-09-15T00:00:00.000Z'});assert.equal(ledgerStatus(s,s.ledger_entries[0],new Date('2026-09-16')),'SETTLED');assert.equal(ledgerPending(s,s.ledger_entries[0]),0);assert.equal(stateSchema.safeParse(s).success,true);});
-test('net balance tracks repayment dates, direction, edits and deletion without double counting cash',()=>{
+test('loan repayments affect monthly cash but leave net balance unchanged',()=>{
  const s=emptyState();
  const entry:LedgerEntry={id:'given',person_id:'p',direction:'GAVE',amount:500,date:'2026-09-01',purpose:'Help',payment_method:'UPI',interest_enabled:false,remind:false,status:'PENDING',written_off_amount:0,created_at:'2026-09-01T00:00:00.000Z'};
  s.ledger_entries.push(entry,{...entry,id:'taken',direction:'TOOK',amount:200});
  s.repayments.push({id:'received',ledger_entry_id:'given',amount:100,date:'2026-10-06',payment_method:'UPI',note:'',created_at:'2026-10-06T00:00:00.000Z'});
- assert.equal(totals(s,'2026-10').balance,100);
+ assert.equal(totals(s,'2026-10').balance,0);
  assert.equal(totals(s,'2026-09').balance,0);
  assert.equal(cashBalance(s,'2026-10'),100);
  assert.equal(cashBalance(s,'2026-09'),-300);
  assert.equal(ledgerPending(s,entry),400);
  s.repayments.push({...s.repayments[0],id:'returned',ledger_entry_id:'taken',amount:50});
- assert.equal(totals(s,'2026-10').balance,50);
+ assert.equal(totals(s,'2026-10').balance,0);
  assert.equal(cashBalance(s,'2026-10'),50);
  s.repayments[0].amount=200;
- assert.equal(totals(s,'2026-10').balance,150);
+ assert.equal(totals(s,'2026-10').balance,0);
+ assert.equal(cashBalance(s,'2026-10'),150);
  s.repayments.shift();
- assert.equal(totals(s,'2026-10').balance,-50);
+ assert.equal(totals(s,'2026-10').balance,0);
+ assert.equal(cashBalance(s,'2026-10'),-50);
  assert.equal(totals(s,'2026-10').income,0);
  assert.equal(totals(s,'2026-10').expenses,0);
  assert.equal(totals(s,'2026-10').savings,0);
