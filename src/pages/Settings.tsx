@@ -1,11 +1,11 @@
+import { CategorySettings } from '../components/CategorySettings';
 import { useState } from 'react';
 import { addMonths, format } from 'date-fns';
-import { Database, Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Database, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Category } from '../../shared/schema';
 import { demoState, emptyState, monthKey, salaryCreditDate, uid } from '../../shared/finance';
 import { download, useStore } from '../lib';
-import { Button, Card, Modal } from '../components/ui';
+import { Button, Card } from '../components/ui';
 import { useConfirm } from '../components/ConfirmProvider';
 
 type SalaryRule='fixed'|'last_working_day'|'before_last_working_day'|'manual';
@@ -36,14 +36,13 @@ function SalaryProfile(){
 
 export function Settings({dark,toggleTheme}:{dark:boolean;toggleTheme:()=>void}){
  const {state:s,save,saving,demo,deleteAccount}=useStore();
- const [category,setCategory]=useState<Partial<Category>|null>(null);
  const confirm=useConfirm();
  if(!s)return null;
  return <>
   <div className="page-heading"><div><div className="eyebrow">MAKE YOURSELF AT HOME</div><h1>The little details</h1><p>Your profile, preferences, and data.</p></div><span className="badge"><Database size={14}/>{demo?'Local demo storage':'MongoDB account'}</span></div>
   <div className="two-col"><SalaryProfile/><Card title="Your preferences" subtitle="A comfortable place to check in"><div className="setting-row"><div><b>Appearance</b><p className="muted">{dark?'A softer view for late evenings.':'A little light for your day.'}</p></div><Button variant="outline" onClick={toggleTheme}>{dark?'Use light mode':'Use dark mode'}</Button></div><div className="setting-row"><div><b>Storage</b><p className="muted">{demo?'Demo data stays in this browser. Sign out and create an account to use MongoDB.':'Your account data is saved privately in MongoDB.'}</p></div></div></Card></div>
-  <Card title="Your categories" subtitle="Organize your spending in a way that makes sense to you" action={<Button variant="outline" onClick={()=>setCategory({})}><Plus size={15}/>Add category</Button>}><div className="categories-grid">{s.categories.map(c=><div className="category-setting" key={c.id}><i style={{background:c.color}}/><div><b>{c.name}</b><small>{c.type}</small></div><div className="row-actions"><button aria-label={`Edit ${c.name}`} onClick={()=>setCategory(c)}><Pencil size={14}/></button><button aria-label={`Delete ${c.name}`} disabled={c.id==='emi'} onClick={async()=>{if(s.expenses.some(e=>e.category_id===c.id)||s.budgets.some(b=>b.category_id===c.id)){toast.error('Move or remove linked expenses and budgets before deleting this category.');return;}if(await confirm({title:'Delete category?',description:`${c.name} will be permanently removed.`,confirmLabel:'Delete category',danger:true}))await save({...s,categories:s.categories.filter(x=>x.id!==c.id)});}}><Trash2 size={14}/></button></div></div>)}</div></Card>
+  <CategorySettings/>
   <Card title="Your data, your choice" subtitle="Export a copy, try sample data, or start fresh"><div className="setting-row"><div><b>Export all data</b><p className="muted">Download your full financial data as JSON.</p></div><Button variant="outline" onClick={()=>download('moneymate-backup.json',JSON.stringify(s,null,2),'application/json')}><Download size={15}/>Export data</Button></div><div className="setting-row"><div><b>Explore with demo data</b><p className="muted">Replace current data with six months of sample finances.</p></div><Button variant="outline" onClick={async()=>{if(await confirm({title:'Load demo data?',description:'This replaces all current financial data with sample data. Export a backup first if you need it.',confirmLabel:'Replace data',danger:true})){const next=demoState();next.profile=s.profile;if(await save(next))toast.success('Demo data loaded');}}}>Load demo data</Button></div><div className="setting-row"><div><b>Clear financial data</b><p className="muted">Remove transactions, loans, budgets, goals, and personal ledgers. Keep your profile.</p></div><Button variant="danger" onClick={async()=>{if(await confirm({title:'Clear financial data?',description:'Transactions, loans, budgets, goals, and personal ledgers will be permanently removed. Your profile will remain.',confirmLabel:'Clear data',danger:true})){const next=emptyState(s.profile.name);next.profile=s.profile;await save(next);}}}>Clear data</Button></div><div className="setting-row"><div><b>Delete {demo?'demo data':'account'}</b><p className="muted">Permanently remove {demo?'the demo on this browser':'your account and all stored data'}.</p></div><Button variant="danger" onClick={async()=>{if(await confirm({title:`Delete ${demo?'demo data':'account'}?`,description:'All stored data will be permanently removed and you will be signed out. This cannot be undone.',confirmLabel:demo?'Delete demo data':'Delete account',danger:true}))void deleteAccount();}}><Trash2 size={15}/>Delete {demo?'demo':'account'}</Button></div></Card>
-  {category&&<Modal open title={category.id?'Edit category':'New category'} onClose={()=>setCategory(null)}><form className="form-grid" onSubmit={async e=>{e.preventDefault();const f=new FormData(e.currentTarget),c:Category={id:category.id||uid(),name:String(f.get('name')),color:String(f.get('color')),type:String(f.get('type')) as Category['type'],icon:'Wallet'};if(await save({...s,categories:category.id?s.categories.map(x=>x.id===category.id?c:x):[...s.categories,c]})){setCategory(null);toast.success('Category saved');}}}><label className="full">Name<input name="name" required maxLength={60} defaultValue={category.name}/></label><label>Color<input name="color" type="color" defaultValue={category.color||'#8172d5'}/></label><label>Type<select name="type" defaultValue={category.type||'variable'}><option value="variable">Variable</option><option value="fixed">Fixed</option></select></label><Button className="full" disabled={saving}>Save category</Button></form></Modal>}
+
  </>;
 }

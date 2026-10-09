@@ -199,3 +199,11 @@ tests/browser/           Playwright browser tests
 ## License
 
 Private project. Add a license file before distributing the source publicly.
+
+## Category organisation
+
+Existing categories are organised when an account or demo is opened and on save. Known names merge into eight spending groups plus Other; repayments, savings and outgoing transfers stay separate from spending. Transaction IDs, amounts, notes, recurrence and loan links are kept. Original category names are retained on moved transactions and CSV exports. Monthly limits are added together when budgets merge. Unknown categories (including ambiguous Family, Subscriptions and return Fund names) remain under Needs review and count as spending until classified.
+
+Settings shows a description for every category. New categories require an explanation and money type; duplicate names are rejected. Edit can merge a category into an existing one while keeping linked transactions and budgets. Transaction forms show category guidance and let users specify fixed or variable amounts independently of monthly recurrence. Personal lending and repayments can be tracked in People & Loans; avoid recording the same movement there and as an outgoing transaction.
+
+Everyday spending excludes debt, savings and transfer categories. Net balance subtracts all outgoing transaction entries; cash balance additionally applies the existing people ledger movements. Savings rate measures income left after spending and debt repayments, before allocating money to savings or transfers. These are cash-flow views, not account-to-account asset balances.

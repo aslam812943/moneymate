@@ -36,7 +36,7 @@ test('demo transactions, goals, budgets, reports and mobile navigation',async({p
  await page.getByRole('button',{name:'Save transaction'}).click();await expect(page.getByRole('dialog')).toHaveCount(0);
  await page.locator('.sidebar').getByRole('link',{name:'Expenses',exact:true}).click();await page.getByLabel('Search transactions').fill('Browser smoke purchase');
  await expect(page.getByRole('cell',{name:'Browser smoke purchase',exact:true})).toBeVisible();
- await page.reload();await expect(page.getByRole('heading',{name:'Your expenses'})).toBeVisible();
+ await page.reload();await expect(page.getByRole('heading',{name:'Spending & money movements'})).toBeVisible();
  await page.locator('.sidebar').getByRole('link',{name:'Savings goals'}).click();await page.getByRole('button',{name:'New goal'}).click();
  await page.getByLabel('Goal name').fill('Browser goal');await page.getByLabel('Target (₹)').fill('10000');await page.getByLabel('Deadline').fill('2027-12-01');await page.getByRole('button',{name:'Save goal'}).click();await expect(page.getByRole('heading',{name:'Browser goal'})).toBeVisible();
  await page.locator('.sidebar').getByRole('link',{name:'Budgets',exact:true}).click();await expect(page.getByRole('heading',{name:'Make a little room'})).toBeVisible();
